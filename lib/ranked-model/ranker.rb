@@ -163,8 +163,12 @@ module RankedModel
             position_at :first
           when Integer
             neighbors = neighbors_at_position(position)
-            min = ((neighbors[:lower] && neighbors[:lower].has_rank?) ? neighbors[:lower].rank : RankedModel::MIN_RANK_VALUE)
-            max = ((neighbors[:upper] && neighbors[:upper].has_rank?) ? neighbors[:upper].rank : RankedModel::MAX_RANK_VALUE)
+            return position_at :first if neighbors[:lower].nil?
+            return position_at :last if neighbors[:upper].nil?
+
+            min = neighbors[:lower].has_rank? ? neighbors[:lower].rank : RankedModel::MIN_RANK_VALUE
+            max = neighbors[:upper].has_rank? ? neighbors[:upper].rank : RankedModel::MAX_RANK_VALUE
+
             rank_at_average min, max
           when NilClass
             if !rank
