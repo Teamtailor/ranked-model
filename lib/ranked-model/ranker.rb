@@ -210,9 +210,25 @@ module RankedModel
       def assure_unique_position
         if ( new_record? || rank_changed? )
           if (rank > RankedModel::MAX_RANK_VALUE) || rank_taken?
-            notify_ranks_updated { rearrange_ranks }
+            notify_ranks_updated { nudge_to_free_rank || rearrange_ranks }
           end
         end
+      end
+
+      # A taken rank almost always means two records were positioned concurrently
+      # and computed the same rank. Moving one of them to the adjacent free integer
+      # keeps every other record's rank untouched, whereas rearrange_ranks rewrites
+      # every row on one side of the list.
+      def nudge_to_free_rank
+        return false if rank >= RankedModel::MAX_RANK_VALUE || rank <= RankedModel::MIN_RANK_VALUE
+
+        step = [:last, 'last'].include?(position) ? 1 : -1
+        candidate = rank + step
+        return false unless candidate.between?(RankedModel::MIN_RANK_VALUE, RankedModel::MAX_RANK_VALUE)
+        return false if finder.except(:order).where(ranker.column => candidate).exists?
+
+        rank_at candidate
+        true
       end
 
       def rearrange_ranks
