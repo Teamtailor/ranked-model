@@ -29,8 +29,10 @@ module RankedModel
   private
 
   def handle_ranking
-    self.class.rankers.each do |ranker|
-      ranker.with(self).handle_ranking
+    self.class.uncached do
+      self.class.rankers.each do |ranker|
+        ranker.with(self).handle_ranking
+      end
     end
   end
 
