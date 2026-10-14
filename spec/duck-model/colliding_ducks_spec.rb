@@ -42,3 +42,40 @@ describe LovesickDuck do
     end
   end
 end
+
+module WritesFromAnotherProcess
+  class << self
+    attr_accessor :ranks
+  end
+
+  private
+
+  def assure_unique_position
+    (WritesFromAnotherProcess.ranks || []).each do |rank|
+      LovesickDuck.connection.execute "INSERT INTO lovesick_ducks (name, row) VALUES ('Concurrent', #{rank})"
+    end
+    WritesFromAnotherProcess.ranks = nil
+    super
+  end
+end
+
+RankedModel::Ranker::Mapper.prepend WritesFromAnotherProcess
+
+describe LovesickDuck do
+  describe "the first duck of an empty list colliding with ducks saved by another process" do
+    after { WritesFromAnotherProcess.ranks = nil }
+
+    [:last, :first].each do |position|
+      context "when positioned #{position} with the query cache on" do
+        before {
+          WritesFromAnotherProcess.ranks = [0, -1]
+          LovesickDuck.cache { LovesickDuck.create(:name => 'Webby', :row_position => position) }
+        }
+
+        it "keeps all ranks unique" do
+          expect(LovesickDuck.pluck(:row).uniq.size).to eq(3)
+        end
+      end
+    end
+  end
+end
