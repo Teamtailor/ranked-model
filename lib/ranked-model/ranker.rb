@@ -139,6 +139,7 @@ module RankedModel
               position_at :middle
             end
           when :last, 'last'
+            @appending = true
             if current_last && current_last.rank
               if ranker.preferred_spread
                 rank_with_preferred_spread current_last.rank, RankedModel::MAX_RANK_VALUE
@@ -201,7 +202,7 @@ module RankedModel
         modifier = min < max ? 1 : -1
 
         if (max - min).abs < ranker.preferred_spread * 2
-          rank_at(min + (max - min).abs * 0.3 * modifier)
+          rank_at(min + modifier * [((max - min).abs * 0.3).floor, 1].max)
         else
           rank_at(min + modifier * ranker.preferred_spread)
         end
@@ -222,7 +223,7 @@ module RankedModel
       def nudge_to_free_rank
         return false if rank >= RankedModel::MAX_RANK_VALUE || rank <= RankedModel::MIN_RANK_VALUE
 
-        step = [:last, 'last'].include?(position) ? 1 : -1
+        step = @appending ? 1 : -1
         candidate = rank + step
         return false unless candidate.between?(RankedModel::MIN_RANK_VALUE, RankedModel::MAX_RANK_VALUE)
         return false if finder.except(:order).where(ranker.column => candidate).exists?

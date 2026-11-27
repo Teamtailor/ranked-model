@@ -1,6 +1,29 @@
 require 'spec_helper'
 
 describe LovesickDuck do
+  describe "appending past ducks a few ranks from the end of the range" do
+    [2, 3, 4].each do |gap|
+      [:last, :first].each do |position|
+        context "when the end duck is #{gap} from the #{position} end" do
+          before {
+            end_rank = position == :last ? RankedModel::MAX_RANK_VALUE - gap : RankedModel::MIN_RANK_VALUE + gap
+            step = position == :last ? -1000 : 1000
+            @ducks = Array.new(3) { |i| LovesickDuck.create(:name => "Duck #{i}") }
+            @ducks.reverse.each_with_index { |duck, i| LovesickDuck.where(:id => duck.id).update_all(:row => end_rank + step * i) }
+            @added = Array.new(3) { |i| LovesickDuck.create(:name => "Added #{i}", :row_position => position) }
+          }
+
+          it "places each new duck past the one before it" do
+            expected = position == :last ? @ducks + @added : @added.reverse + @ducks.reverse
+            expect(LovesickDuck.order(:row).pluck(:id)).to eq(expected.map(&:id))
+          end
+        end
+      end
+    end
+  end
+end
+
+describe LovesickDuck do
   before {
     @ducks = {
       :quacky => LovesickDuck.create(:name => 'Quacky'),

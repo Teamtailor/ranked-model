@@ -79,3 +79,19 @@ describe LovesickDuck do
     end
   end
 end
+
+describe LovesickDuck do
+  describe "a duck appended last colliding with a duck saved by another process" do
+    after { WritesFromAnotherProcess.ranks = nil }
+
+    before {
+      @quacky = LovesickDuck.create(:name => 'Quacky')
+      WritesFromAnotherProcess.ranks = [@quacky.reload.row + 1000]
+      @webby = LovesickDuck.create(:name => 'Webby')
+    }
+
+    it "takes the free rank after the duck it collided with" do
+      expect(LovesickDuck.order(:row).pluck(:name)).to eq(['Quacky', 'Concurrent', 'Webby'])
+    end
+  end
+end
